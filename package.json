@@ -1,12 +1,13 @@
 {
   "name": "@hrimthurs/mediator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "author": "@hrimthurs",
   "license": "MIT",
   "repository": "hrimthurs/Mediator",
   "type": "module",
   "module": "./src/Mediator.js",
+  "main": "./src/Mediator.js",
   "scripts": {
     "live:example": "start /min webpack serve",
     "version": "npm view @hrimthurs/mediator version",
