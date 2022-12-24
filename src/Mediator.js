@@ -1,26 +1,9 @@
-import Debug from './Debug.js'
-new Debug({
-    captureLog: {
-        active: false,
-        lastSession: {
-            compareWithPrev: {
-                saveDiffRecord: true,
-                saveDiffFile: true,
-                ignoreKeys: ['id']
-            }
-        }
-    }
-})
-
 import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
 const TIMEOUT_WORKER_CONNECT = 1000
 
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
-
-// DBG
-var f = false
 
 export default class Mediator {
 
@@ -99,11 +82,6 @@ export default class Mediator {
      * @return {string} handler id
      */
     static subscribe(eventName, handlerFunc, options = {}) {
-        if (!f) {
-            f = true
-            console.log(this.isWorker, mainContext.location.pathname.replace(/\/js\//, ''), this.#threadId, this.#events)
-        }
-
         let handlerId = options.id ?? TkService.generateHashUID(handlerFunc.toString())
 
         this.#distributeEvent(eventName, {
@@ -348,4 +326,34 @@ export default class Mediator {
         return (event.handlers.length === 0) && (callWorkers.length === 0)
     }
 
+    static _dbg() {
+        this.#threadId = TkObject.getHash(mainContext.location.href)
+        console.log(this.isWorker, mainContext.location.pathname.replace(/\/js\//, ''), this.#threadId, this.#events)
+        // console.log(this.#events)
+    }
+
+}
+
+/////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
+
+let debugMode
+debugMode = true
+
+if (debugMode) {
+    import('./Debug.js').then(({ default: Debug }) => {
+        new Debug({
+            captureLog: {
+                active: false,
+                lastSession: {
+                    compareWithPrev: {
+                        saveDiffRecord: true,
+                        saveDiffFile: true,
+                        ignoreKeys: ['id']
+                    }
+                }
+            }
+        })
+
+        Mediator._dbg()
+    })
 }
