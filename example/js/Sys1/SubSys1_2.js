@@ -1,4 +1,4 @@
-import Mediator from '../../../src/Mediator.js' // '@hrimthurs/mediator' (npm)
+import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 export default class SubSys1_2 {
 }

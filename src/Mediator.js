@@ -12,7 +12,7 @@ new Debug({
     }
 })
 
-import { TkObject, TkService } from '@hrimthurs/tackle'
+import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
 const TIMEOUT_WORKER_CONNECT = 1000
 
@@ -61,30 +61,31 @@ export default class Mediator {
     }
 
     /**
-     * Asynchronous connection system
-     * @param {object} options
-     * @param {string} options.name                                 - name system
-     * @param {Worker} [options.worker]                             - worker instance of system
-     * @param {function(string, string):void} [options.logError]    - errors handler
-     *      - arg0 - error message
-     *      - arg1 - name of the system where the error occurred
-     * @param {object} [options.config]                             - configuration settings for this system
+     * Asynchronous connection systems
+     * @param {object|object[]} systems - records systems (name, instance, config)
      * @return {Promise}
      */
-    static connect({ name, worker = null, logError = (err, sysName) => {}, config = {} }) {
-        return new Promise((resolve, reject) => {
-            (this.#importWorker(worker, config, logError) || import(`./${name}/${name}.js`))
-                .then(exported => {
-                    const classInst = exported?.default
-                    if (classInst && this.active) new classInst(config)
-                    resolve()
+    static connect(systems) {
+        let connectPromises = TkArray.getArray(systems)
+            .map(rec => {
+                return new Promise((resolve, reject) => {
+                    const promise = rec.instance instanceof Worker
+                        ? this.#importWorker(rec.instance, rec.config)
+                        : rec.instance
+
+                    promise
+                        .then(exported => {
+                            const classInst = exported?.default
+                            if (classInst && this.active) new classInst(rec.config)
+                            resolve()
+                        })
+                        .catch(error => {
+                            reject({ sysName: rec.name, error })
+                        })
                 })
-                .catch(error => {
-                    const err = error?.message
-                    if (err) logError(err, name)
-                    reject(err)
-                })
-        })
+            })
+
+        return Promise.all(connectPromises)
     }
 
     /**
@@ -177,66 +178,63 @@ export default class Mediator {
         }
     }
 
-    static #importWorker(worker, config, logError) {
-        if (worker) {
-            let promise = new Promise((resolve, reject) => {
-                const throwError = (message) => {
-                    this.active = false
-                    clearTimeout(connectTimeOut)
-                    logError(message)
-                    worker.terminate()
-                    reject()
-                }
+    static #importWorker(worker, config) {
+        let promise = new Promise((resolve, reject) => {
+            const throwError = (message) => {
+                this.active = false
+                clearTimeout(connectTimeOut)
+                worker.terminate()
+                reject({ message })
+            }
 
-                let connectTimeOut = setTimeout(() => {
-                    throwError('Timeout connect as worker. Check module for call Mediator.exportWorker()')
-                }, TIMEOUT_WORKER_CONNECT)
+            let connectTimeOut = setTimeout(() => {
+                throwError('Timeout connect as worker. Check module for call Mediator.exportWorker()')
+            }, TIMEOUT_WORKER_CONNECT)
 
-                worker.addEventListener('error', event => {
-                    event.preventDefault()
-                    throwError(event.message)
-                })
-
-                worker.addEventListener('message', ({ data: msg }) => {
-                    switch (msg.name) {
-                        case 'wrkInstalled':
-                            clearTimeout(connectTimeOut)
-                            this.#workers[msg.workerId] = worker
-
-                            let initEvents = TkObject.enumeration(this.#events, event => ({
-                                callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
-                            }))
-
-                            worker.postMessage({ name: 'wrkInit', initEvents })
-
-                            resolve()
-                            break
-
-                        case 'wrkActionAllSystems':
-                            this.#actionAllSystems(msg.actionName, msg.param, msg.complete)
-                            break
-
-                        case 'wrkDistributeEvent':
-                            this.#distributeEvent(msg.eventName, { callWorkers: msg.workerId }, msg.workerId)
-                            break
-
-                        case 'wrkDelCallWorker':
-                            const event = this.#events[msg.eventName]
-                            event.callWorkers = event.callWorkers.filter(id => id !== msg.workerId)
-
-                            if (this.#isEmptyEvent(event)) {
-                                this.#setChildrenCallParent(msg.eventName, false, false)
-                                if (event.callParent) this.#cleanParentCallWorkers(msg.eventName, event)
-                            }
-                            break
-                    }
-                })
-
-                worker.postMessage({ name: 'wrkInstall', config })
+            worker.addEventListener('error', event => {
+                event.preventDefault()
+                throwError(event.message)
             })
 
-            return promise
-        }
+            worker.addEventListener('message', ({ data: msg }) => {
+                switch (msg.name) {
+                    case 'wrkInstalled':
+                        clearTimeout(connectTimeOut)
+                        this.#workers[msg.workerId] = worker
+
+                        let initEvents = TkObject.enumeration(this.#events, event => ({
+                            callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
+                        }))
+
+                        worker.postMessage({ name: 'wrkInit', initEvents })
+
+                        resolve()
+                        break
+
+                    case 'wrkActionAllSystems':
+                        this.#actionAllSystems(msg.actionName, msg.param, msg.complete)
+                        break
+
+                    case 'wrkDistributeEvent':
+                        this.#distributeEvent(msg.eventName, { callWorkers: msg.workerId }, msg.workerId)
+                        break
+
+                    case 'wrkDelCallWorker':
+                        const event = this.#events[msg.eventName]
+                        event.callWorkers = event.callWorkers.filter(id => id !== msg.workerId)
+
+                        if (this.#isEmptyEvent(event)) {
+                            this.#setChildrenCallParent(msg.eventName, false, false)
+                            if (event.callParent) this.#cleanParentCallWorkers(msg.eventName, event)
+                        }
+                        break
+                }
+            })
+
+            worker.postMessage({ name: 'wrkInstall', config })
+        })
+
+        return promise
     }
 
     static #actionAllSystems(actionName, param, complete = []) {

@@ -1,4 +1,4 @@
-import Mediator from '../../../src/Mediator.js' // '@hrimthurs/mediator' (npm)
+import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 // Subsystems imports
 // They can import Mediator and use methods from there. They don't need to call Mediator.exportWorker()

@@ -1,4 +1,4 @@
-import Mediator from '../../../src/Mediator.js' // '@hrimthurs/mediator' (npm)
+import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 import SubSys2_1 from './SubSys2_1.js'
 

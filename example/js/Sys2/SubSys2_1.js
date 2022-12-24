@@ -1,6 +1,4 @@
-import Mediator from '../../../src/Mediator.js' // '@hrimthurs/mediator' (npm)
-
-// import DbgEvents from '../DbgEvents.js'
+import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 export default class SubSys2_1 {
 

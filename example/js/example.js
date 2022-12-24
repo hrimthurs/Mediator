@@ -1,8 +1,8 @@
-import Mediator from '../../src/Mediator.js' // '@hrimthurs/mediator' (npm)
+import Mediator from '../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 const availWorker = typeof Worker === 'function'
 
-const systems = {
+const cfgSystems = {
     // _SystemTemplate: {
     //     worker: availWorker && new Worker(new URL('./Engine/_SystemTemplate/_SystemTemplate.js', import.meta.url))
     // },
@@ -23,8 +23,18 @@ const systems = {
     }
 }
 
+const systems = Object.keys(cfgSystems).map(name => ({
+    name,
+    instance: cfgSystems[name].worker ?? import(`./${name}/${name}.js`),
+    config: cfgSystems[name].config
+}))
 
-// DBG
+Mediator.connect(systems)
+    .then(() => console.log('[APPLICATION] Complete connect systems'))
+    .catch(rec => console.log(`[APPLICATION] Fail connect systems: ${rec.sysName} - ${rec.error.message}`))
+
+/////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
+
 import('./DbgEvents.js').then(instance => {
     let dbgEvents = new instance.DbgEvents({
         origin: 'App',
@@ -64,16 +74,3 @@ import('./DbgEvents.js').then(instance => {
 
     // ...
 })
-// DBG
-
-let sysPromises = Object.entries(systems).map(rec => {
-    let [name, cfg] = rec
-    return Mediator.connect({
-        name, ...cfg,
-        logError: err => console.log(`[ERROR - ${name}]`, err)
-    })
-})
-
-Promise.all(sysPromises)
-    .then(() => console.log('[APPLICATION] Complete connect systems'))
-    .catch(() => console.log('[APPLICATION] Fail connect systems'))
