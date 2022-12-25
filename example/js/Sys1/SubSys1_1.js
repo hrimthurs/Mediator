@@ -4,7 +4,7 @@ export default class SubSys1_1 {
 
     constructor (config) {
         // DBG
-        import('../DbgEvents.js').then(instance => {
+        import('../DbgEvents.js').then((instance) => {
             let dbgEvents = new instance.DbgEvents({
                 origin: this.constructor.name,
                 subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),

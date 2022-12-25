@@ -13,7 +13,7 @@
     }
 
     subscribeBase() {
-        ['event' + this.#origin, 'eventTotal'].forEach(eventName => {
+        ['event' + this.#origin, 'eventTotal'].forEach((eventName) => {
             this.subscribe(eventName)
             this.subscribe(eventName + 'Custom', { id: this.#makeEventId(eventName, 'Custom'), sleep: 100 })
             this.subscribe(eventName + 'Late', {}, 500)
@@ -36,7 +36,7 @@
     removeHandler(handlerId, eventName, late = 0) {
         this.#call(() => {
             this.#removeHandler(handlerId, eventName)
-            this.#handlers = this.#handlers.filter(id => id !== handlerId)
+            this.#handlers = this.#handlers.filter((id) => id !== handlerId)
         }, late)
     }
 

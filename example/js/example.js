@@ -23,7 +23,7 @@ const cfgSystems = {
     }
 }
 
-const systems = Object.keys(cfgSystems).map(name => ({
+const systems = Object.keys(cfgSystems).map((name) => ({
     name,
     instance: cfgSystems[name].worker ?? import(`./${name}/${name}.js`),
     config: cfgSystems[name].config
@@ -31,11 +31,11 @@ const systems = Object.keys(cfgSystems).map(name => ({
 
 Mediator.connect(systems)
     .then(() => console.log('[APPLICATION] Complete connect systems'))
-    .catch(rec => console.log(`[APPLICATION] Fail connect systems: ${rec.sysName} - ${rec.error.message}`))
+    .catch((rec) => console.log(`[APPLICATION] Fail connect systems: ${rec.sysName} - ${rec.error.message}`))
 
 /////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
 
-import('./DbgEvents.js').then(instance => {
+import('./DbgEvents.js').then((instance) => {
     let dbgEvents = new instance.DbgEvents({
         origin: 'App',
         subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),

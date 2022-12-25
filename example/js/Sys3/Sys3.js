@@ -1,7 +1,7 @@
 import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
 
 // DBG
-import('../DbgEvents.js').then(instance => {
+import('../DbgEvents.js').then((instance) => {
     let dbgEvents = new instance.DbgEvents({
         origin: 'Sys3',
         subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),

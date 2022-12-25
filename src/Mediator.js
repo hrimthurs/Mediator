@@ -1,6 +1,7 @@
 import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
 const TIMEOUT_WORKER_CONNECT = 1000
+const TIMEOUT_EVENTS_RESOLVE = 1000
 
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
@@ -10,13 +11,13 @@ export default class Mediator {
     static #active = true
     static #threadId = TkService.generateHashUID(mainContext.location.href)
 
-    // static #defferedEvents = []
     static #workers = {}
     static #events = {}
+    // static #defferedEvents = []
 
     /**
      * Current context is a webworker
-     * @return {boolean}
+     * @returns {boolean}
      */
     static get isWorker() {
         return workerMode
@@ -24,7 +25,7 @@ export default class Mediator {
 
     /**
      * Get/set current activity of Mediator
-     * @return {boolean}
+     * @returns {boolean}
      */
     static get active() {
         return this.#active
@@ -36,8 +37,8 @@ export default class Mediator {
 
     /**
      * Availability registered event
-     * @param {string} eventName    - event name
-     * @return {boolean}
+     * @param {string} eventName            - event name
+     * @returns {boolean}
      */
     static isExistEvent(eventName) {
         return eventName in this.#events
@@ -45,24 +46,32 @@ export default class Mediator {
 
     /**
      * Asynchronous connection systems
-     * @param {object|object[]} systems - records systems (name, instance, config)
-     * @return {Promise}
+     * @param {TSystem|TSystem[]} systems   - records of systems to connect
+     *
+     * @typedef {object} TSystem
+     * @property {string} name              - name system
+     * @property {string|Worker} instance   - instance system: path to module or worker
+     * @property {object} [config]          - configuration system (default = {})
+     *
+     * @returns {Promise} promise connected all systems
      */
     static connect(systems) {
         let connectPromises = TkArray.getArray(systems)
-            .map(rec => {
+            .map((rec) => {
                 return new Promise((resolve, reject) => {
+                    const cfg = rec.config ?? {}
+
                     const promise = rec.instance instanceof Worker
-                        ? this.#importWorker(rec.instance, rec.config)
+                        ? this.#importWorker(rec.instance, cfg)
                         : rec.instance
 
                     promise
-                        .then(exported => {
+                        .then((exported) => {
                             const classInst = exported?.default
-                            if (classInst && this.active) new classInst(rec.config)
+                            if (classInst && this.active) new classInst(cfg)
                             resolve()
                         })
-                        .catch(error => {
+                        .catch((error) => {
                             reject({ sysName: rec.name, error })
                         })
                 })
@@ -73,13 +82,15 @@ export default class Mediator {
 
     /**
      * Set handler function to event
-     * @param {string} eventName        - name event
-     * @param {function} handlerFunc    - handler function
-     * @param {object} [options]
-     * @param {string} [options.id]     - force set handler id
-     * @param {boolean} [options.once]  - remove handler after once execution
-     * @param {number} [options.sleep]  - pause between handler calls (ms)
-     * @return {string} handler id
+     * @param {string} eventName            - name event
+     * @param {function} handlerFunc        - handler function
+     *
+     * @param {object} [options]            - options of handler
+     * @param {string} [options.id]         - force set handler id (if not set: auto generate)
+     * @param {boolean} [options.once]      - remove handler after once execution (default = false)
+     * @param {number} [options.sleep]      - pause between handler calls in ms (default = 0)
+     *
+     * @returns {string} handler id
      */
     static subscribe(eventName, handlerFunc, options = {}) {
         let handlerId = options.id ?? TkService.generateHashUID(handlerFunc.toString())
@@ -99,27 +110,36 @@ export default class Mediator {
 
     /**
      * Remove exist handler from event
-     * @param {string} handlerId        - handler id
-     * @param {string} [eventName]      - name event (if not set, removes this handler from all existing events)
+     * @param {string} handlerId            - handler id
+     * @param {string} [eventName]          - name event (if not set: removes this handler from all existing events)
      */
     static removeHandler(handlerId, eventName = null) {
         this.#actionAllSystems('actionRemoveHandler', { handlerId, eventName })
     }
 
     /**
-     *
+     * Broadcast event
+     * @param {string} eventName            - event name
+     * @param {any} args                    - arguments of event
      */
     static broadcast(eventName, ...args) {
+        // ...
     }
 
     /**
-     *
+     * Broadcast event and return promise results handlers
+     * @param {string} eventName            - event name
+     * @param {any} args                    - arguments of event
+     * @returns {Promise} promise results of all event handlers
      */
     static broadcastPromise(eventName, ...args) {
+        // ...
+        return new Promise((resolve) => resolve())
     }
 
     /**
-     *
+     * Export system in worker mode
+     * @param {object} [classesInstantiate] - classes of system for which the constructor is called after connection
      */
     static exportWorker(...classesInstantiate) {
         if (this.isWorker) {
@@ -127,7 +147,7 @@ export default class Mediator {
                 if (this.#active) {
                     switch (msg.name) {
                         case 'wrkInstall':
-                            classesInstantiate.forEach(classInst => new classInst(msg.config))
+                            classesInstantiate.forEach((classInst) => new classInst(msg.config))
 
                             this.#postMessageToParent({
                                 name: 'wrkInstalled',
@@ -169,7 +189,7 @@ export default class Mediator {
                 throwError('Timeout connect as worker. Check module for call Mediator.exportWorker()')
             }, TIMEOUT_WORKER_CONNECT)
 
-            worker.addEventListener('error', event => {
+            worker.addEventListener('error', (event) => {
                 event.preventDefault()
                 throwError(event.message)
             })
@@ -180,7 +200,7 @@ export default class Mediator {
                         clearTimeout(connectTimeOut)
                         this.#workers[msg.workerId] = worker
 
-                        let initEvents = TkObject.enumeration(this.#events, event => ({
+                        let initEvents = TkObject.enumeration(this.#events, (event) => ({
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
@@ -199,7 +219,7 @@ export default class Mediator {
 
                     case 'wrkDelCallWorker':
                         const event = this.#events[msg.eventName]
-                        event.callWorkers = event.callWorkers.filter(id => id !== msg.workerId)
+                        event.callWorkers = event.callWorkers.filter((id) => id !== msg.workerId)
 
                         if (this.#isEmptyEvent(event)) {
                             this.#setChildrenCallParent(msg.eventName, false, false)
@@ -259,7 +279,7 @@ export default class Mediator {
         if (event) {
             let isRemove = false
 
-            event.handlers = event.handlers.filter(rec => {
+            event.handlers = event.handlers.filter((rec) => {
                 let isFound = rec.id === handlerId
                 if (isFound) isRemove = true
                 return !isFound
@@ -320,7 +340,7 @@ export default class Mediator {
 
     static #isEmptyEvent(event, ignoreWorkerId = null) {
         const callWorkers = ignoreWorkerId
-            ? event.callWorkers.filter(id => id !== ignoreWorkerId)
+            ? event.callWorkers.filter((id) => id !== ignoreWorkerId)
             : event.callWorkers
 
         return (event.handlers.length === 0) && (callWorkers.length === 0)
@@ -329,7 +349,6 @@ export default class Mediator {
     static _dbg() {
         this.#threadId = TkObject.getHash(mainContext.location.href)
         console.log(this.isWorker, mainContext.location.pathname.replace(/\/js\//, ''), this.#threadId, this.#events)
-        // console.log(this.#events)
     }
 
 }

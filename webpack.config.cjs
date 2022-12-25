@@ -1,7 +1,7 @@
 const path = require('path')
 const pathPublic = path.join(__dirname, 'example')
 
-module.exports = env => {
+module.exports = (env) => {
     return {
         mode: 'development',
 

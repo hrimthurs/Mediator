@@ -67,7 +67,7 @@ export default class Debug {
             let isFinish = --session.members === 0
 
             session.active = !isFinish
-            outLogData.forEach(rec => session.data.push(JSON.stringify(rec)))
+            outLogData.forEach((rec) => session.data.push(JSON.stringify(rec)))
 
             idb.setRecord(session, -1)
             if (isFinish) this.#finishCaptureLog(idb, cfg, session)
@@ -107,7 +107,7 @@ export default class Debug {
 
         if (cfg.outConsole) {
             this.#outMessage('Session log:')
-            this.#sessionDataToArray(session.data).forEach(rec => console.log(...rec))
+            this.#sessionDataToArray(session.data).forEach((rec) => console.log(...rec))
         }
 
         if (saveFile) {
@@ -157,7 +157,7 @@ export default class Debug {
     }
 
     #sessionDataToArray(sessionData) {
-        return sessionData.map(rec => Object.values(JSON.parse(rec)))
+        return sessionData.map((rec) => Object.values(JSON.parse(rec)))
     }
 
     #stringifySortObj(src, ignoreKeys, space = '') {
@@ -225,7 +225,7 @@ class IndexedDb {
     }
 
     async forEachRecords(cbAction) {
-        return new Promise(async resolve => {
+        return new Promise(async (resolve) => {
             let allKeys = await this.#request('getAllKeys', [])
 
             for (const key of allKeys) {
@@ -239,7 +239,7 @@ class IndexedDb {
     }
 
     #request(nameRequest, args, resultField = null) {
-        return new Promise(async resolve => {
+        return new Promise(async (resolve) => {
             if (this.#store) {
                 const request = () => {
                     const request = this.#store[nameRequest](...args)

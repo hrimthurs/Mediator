@@ -9,7 +9,7 @@ export default class Sys1 {
         new SubSys1_1()
 
         // DBG
-        import('../DbgEvents.js').then(instance => {
+        import('../DbgEvents.js').then((instance) => {
             let dbgEvents = new instance.DbgEvents({
                 origin: this.constructor.name,
                 subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
