@@ -8,6 +8,7 @@ export default class SubSys1_1 {
             let dbgEvents = new instance.DbgEvents({
                 origin: this.constructor.name,
                 subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
+                broadcast: (eventName, ...args) => Mediator.broadcast(eventName, ...args),
                 removeHandler: (handlerId, eventName) => Mediator.removeHandler(handlerId, eventName)
             })
 
@@ -42,6 +43,23 @@ export default class SubSys1_1 {
             dbgEvents.removeHandler('id_handler_eventSubSys2_1_Custom', null, late)
             dbgEvents.removeHandler('id_handler_eventSys1_Custom', 'eventSys1Custom', late)
             dbgEvents.removeHandler('id_handler_eventSubSys1_1_Custom', 'eventTotalLate', late)
+
+            // self broadcast:
+            dbgEvents.selfBroadcast([200, 400])
+
+            // let origin = 'SubSys1_1'
+            // Mediator.broadcast('evApp-002', origin) // 000, 001, 002
+            // setInterval(() => {
+            //     Mediator.broadcast('evSys1-100', origin)
+            //     Mediator.broadcast('evSubSys1_2-111', origin)
+            //     Mediator.broadcast('evSys3-102', origin)
+
+            //     Mediator.broadcast('evSubSys1_1-110', origin)
+            //     Mediator.broadcast('evSys2-101', origin)
+            //     Mediator.broadcast('evSubSys2_1-112', origin)
+
+            //     Mediator.broadcast('evApp-011', origin) // 010, 011, 012
+            // }, 0)
 
             // ...
         })

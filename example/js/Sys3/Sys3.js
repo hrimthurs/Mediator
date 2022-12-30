@@ -5,6 +5,7 @@ import('../DbgEvents.js').then((instance) => {
     let dbgEvents = new instance.DbgEvents({
         origin: 'Sys3',
         subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
+        broadcast: (eventName, ...args) => Mediator.broadcast(eventName, ...args),
         removeHandler: (handlerId, eventName) => Mediator.removeHandler(handlerId, eventName)
     })
 
@@ -37,6 +38,23 @@ import('../DbgEvents.js').then((instance) => {
     dbgEvents.removeHandler('id_handler_eventSubSys2_1_Custom', null, late)
     dbgEvents.removeHandler('id_handler_eventSys1_Custom', 'eventSys1Custom', late)
     dbgEvents.removeHandler('id_handler_eventSubSys1_1_Custom', 'eventTotalLate', late)
+
+    // self broadcast:
+    dbgEvents.selfBroadcast([200, 400])
+
+    // let origin = 'Sys3'
+    // Mediator.broadcast('evApp-001', origin) // 000, 001, 002
+    // setInterval(() => {
+    //     Mediator.broadcast('evSys1-100', origin)
+    //     Mediator.broadcast('evSubSys1_2-111', origin)
+    //     Mediator.broadcast('evSys3-102', origin)
+
+    //     Mediator.broadcast('evSubSys1_1-110', origin)
+    //     Mediator.broadcast('evSys2-101', origin)
+    //     Mediator.broadcast('evSubSys2_1-112', origin)
+
+    //     Mediator.broadcast('evApp-012', origin) // 010, 011, 012
+    // }, 0)
 
     // ...
 })

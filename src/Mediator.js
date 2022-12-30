@@ -1,7 +1,7 @@
 import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
 const TIMEOUT_WORKER_CONNECT = 1000
-const TIMEOUT_EVENTS_RESOLVE = 1000
+const TIMEOUT_PROMISE_RESOLVE = 1000
 
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
@@ -13,7 +13,6 @@ export default class Mediator {
 
     static #workers = {}
     static #events = {}
-    // static #defferedEvents = []
 
     /**
      * Current context is a webworker
@@ -123,7 +122,7 @@ export default class Mediator {
      * @param {any} args                    - arguments of event
      */
     static broadcast(eventName, ...args) {
-        // ...
+        this.#execEvent(eventName, true, ...args)
     }
 
     /**
@@ -169,6 +168,10 @@ export default class Mediator {
                             const callParent = msg.callParent
                             this.#setEvent(msg.eventName, { callParent })
                             if (msg.deep) this.#setChildrenCallParent(msg.eventName, callParent, msg.deep)
+                            break
+
+                        case 'wrkExecEvent':
+                            this.#execEvent(msg.eventName, false, ...msg.args)
                             break
                     }
                 }
@@ -226,6 +229,10 @@ export default class Mediator {
                             if (event.callParent) this.#cleanParentCallWorkers(msg.eventName, event)
                         }
                         break
+
+                    case 'wrkExecEvent':
+                        this.#execEvent(msg.eventName, true, ...msg.args)
+                        break
                 }
             })
 
@@ -244,11 +251,13 @@ export default class Mediator {
                     break
 
                 case 'actionRemoveHandler':
+                    const handlersIds = [param.handlerId]
+
                     if (!param.eventName) {
                         TkObject.enumeration(this.#events, (event, eventName) => {
-                           this.#removeEventHandler(eventName, param.handlerId)
+                           this.#removeEventHandler(eventName, handlersIds)
                         })
-                    } else this.#removeEventHandler(param.eventName, param.handlerId)
+                    } else this.#removeEventHandler(param.eventName, handlersIds)
                     break
             }
 
@@ -274,13 +283,59 @@ export default class Mediator {
         })
     }
 
-    static #removeEventHandler(eventName, handlerId) {
+    static #execEvent(eventName, allowCallParent, ...args) {
+        if (this.#active) {
+            const event = this.#events[eventName]
+            if (event) {
+                this.#callHandlers(eventName, event, args, false)
+
+                event.callWorkers.forEach((workerId) => {
+                    this.#workers[workerId]?.postMessage({
+                        name: 'wrkExecEvent',
+                        eventName, args
+                    })
+                })
+
+                if (allowCallParent && event.callParent) {
+                    this.#postMessageToParent({
+                        name: 'wrkExecEvent',
+                        eventName, args
+                    })
+                }
+            }
+        }
+    }
+
+    static #callHandlers(eventName, event, args, usePromises) {
+        const now = Date.now()
+
+        let promises = []
+        let removeHandlers = []
+
+        event.handlers.forEach((rec) => {
+            if (!rec.sleep || (now - rec.timePrevCall > rec.sleep)) {
+                rec.timePrevCall = now
+                if (rec.once) removeHandlers.push(rec.id)
+
+                if (!usePromises) rec.handler(...args)
+                else promises.push(this.#createPromiseTimeout(rec.handler, args))
+            }
+        })
+
+        if (removeHandlers.length > 0) {
+            this.#removeEventHandler(eventName, removeHandlers)
+        }
+
+        return promises
+    }
+
+    static #removeEventHandler(eventName, handlersIds) {
         const event = this.#events[eventName]
         if (event) {
             let isRemove = false
 
             event.handlers = event.handlers.filter((rec) => {
-                let isFound = rec.id === handlerId
+                let isFound = handlersIds.includes(rec.id)
                 if (isFound) isRemove = true
                 return !isFound
             })
@@ -346,6 +401,16 @@ export default class Mediator {
         return (event.handlers.length === 0) && (callWorkers.length === 0)
     }
 
+    static #createPromiseTimeout(func, args) {
+        return new Promise(async (resolve) => {
+            let callTimeOut = setTimeout(() => resolve(), TIMEOUT_PROMISE_RESOLVE)
+            let result = await func(...args)
+
+            clearTimeout(callTimeOut)
+            resolve(result)
+        })
+    }
+
     static _dbg() {
         this.#threadId = TkObject.getHash(mainContext.location.href)
         console.log(this.isWorker, mainContext.location.pathname.replace(/\/js\//, ''), this.#threadId, this.#events)
@@ -363,6 +428,8 @@ if (debugMode) {
         new Debug({
             captureLog: {
                 active: false,
+                sessionTime: 3000,
+
                 lastSession: {
                     compareWithPrev: {
                         saveDiffRecord: true,
