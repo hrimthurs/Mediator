@@ -1,25 +1,21 @@
-import Mediator from '../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
+import Mediator from '../../src/Mediator.js'
 
 const availWorker = typeof Worker === 'function'
 
 const cfgSystems = {
-    // _SystemTemplate: {
-    //     worker: availWorker && new Worker(new URL('./Engine/_SystemTemplate/_SystemTemplate.js', import.meta.url))
-    // },
-
     Sys1: {
-        worker: availWorker && new Worker(new URL('./Sys1/Sys1.js', import.meta.url)), // - to run as a web worker
+        worker: availWorker && new Worker(new URL('./Sys1/Sys1.js', import.meta.url)),
         config: {
             cfgVal: 'valSys'
         }
     },
 
     Sys2: {
-        worker: availWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url)) // - to run as a web worker
+        worker: availWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
     },
 
     Sys3: {
-        worker: availWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url)) // - to run as a web worker
+        worker: availWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
     }
 }
 
@@ -29,15 +25,42 @@ const systems = Object.keys(cfgSystems).map((name) => ({
     config: cfgSystems[name].config
 }))
 
+// OR:
+// const systems = [
+//     {
+//         name: 'Sys1',
+//         instance: availWorker
+//             ? new Worker(new URL('./Sys1/Sys1.js', import.meta.url))
+//             : import('./Sys1/Sys1.js'),
+//         config: {
+//             cfgVal: 'valSys'
+//         }
+//     },
+//     {
+//         name: 'Sys2',
+//         instance: availWorker
+//             ? new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
+//             : import('./Sys2/Sys2.js')
+//     },
+//     {
+//         name: 'Sys3',
+//         instance: availWorker
+//             ? new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
+//             : import('./Sys3/Sys3.js')
+//     }
+// ]
+
 Mediator.connect(systems)
     .then(() => console.log('[APPLICATION] Complete connect systems'))
     .catch((rec) => console.log(`[APPLICATION] Fail connect systems: ${rec.sysName} - ${rec.error.message}`))
 
 /////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
 
-import('./DbgEvents.js').then((instance) => {
+import('./DbgEvents.js').then(async (instance) => {
+    const origin = 'App'
+
     let dbgEvents = new instance.DbgEvents({
-        origin: 'App',
+        origin,
         subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
         broadcast: (eventName, ...args) => Mediator.broadcast(eventName, ...args),
         removeHandler: (handlerId, eventName) => Mediator.removeHandler(handlerId, eventName)
@@ -76,7 +99,6 @@ import('./DbgEvents.js').then((instance) => {
     // self broadcast:
     dbgEvents.selfBroadcast([200, 400])
 
-    // let origin = 'App'
     // Mediator.broadcast('evApp-000', origin) // 001, 002
     // setInterval(() => {
     //     Mediator.broadcast('evSys1-100', origin)
@@ -89,6 +111,19 @@ import('./DbgEvents.js').then((instance) => {
 
     //     Mediator.broadcast('evApp-010', origin) // 011, 012
     // }, 0)
+
+    // broadcast promises:
+    // Mediator.subscribe('evPromise', (base) => {
+    //     console.log('handler evPromise ' + origin)
+
+    //     return new Promise((resolve) => {
+    //         setTimeout(() => resolve([base + '-' + origin, 4, 5]), 100)
+    //     })
+    // }, { once: true })
+
+    // setTimeout(async () => {
+    //     console.log(`RES CALL from ${origin}:`, await Mediator.broadcastPromise('evPromise', 111))
+    // }, 2500)
 
     // ...
 })

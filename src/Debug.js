@@ -267,3 +267,39 @@ class IndexedDb {
     }
 
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// TO MEDIATOR MODULE:
+
+// class Mediator:
+// static _dbg() {
+//     this.#threadId = TkObject.getHash(mainContext.location.href)
+//     console.log(this.isWorker, mainContext.location.pathname.replace(/\/js\//, ''), this.#threadId, this.#resolves, this.#events)
+// }
+
+/////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
+
+let debugMode
+debugMode = true
+
+if (debugMode) {
+    import('./Debug.js').then(({ default: Debug }) => {
+        new Debug({
+            captureLog: {
+                // active: false,
+                sessionTime: 3000,
+
+                lastSession: {
+                    compareWithPrev: {
+                        saveDiffRecord: true,
+                        saveDiffFile: true,
+                        ignoreKeys: ['id']
+                    }
+                }
+            }
+        })
+
+        // Mediator._dbg()
+    })
+}

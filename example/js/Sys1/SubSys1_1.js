@@ -1,12 +1,14 @@
-import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
+import Mediator from '../../../src/Mediator.js'
 
 export default class SubSys1_1 {
 
     constructor (config) {
         // DBG
         import('../DbgEvents.js').then((instance) => {
+            const origin = this.constructor.name
+
             let dbgEvents = new instance.DbgEvents({
-                origin: this.constructor.name,
+                origin,
                 subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
                 broadcast: (eventName, ...args) => Mediator.broadcast(eventName, ...args),
                 removeHandler: (handlerId, eventName) => Mediator.removeHandler(handlerId, eventName)
@@ -47,7 +49,6 @@ export default class SubSys1_1 {
             // self broadcast:
             dbgEvents.selfBroadcast([200, 400])
 
-            // let origin = 'SubSys1_1'
             // Mediator.broadcast('evApp-002', origin) // 000, 001, 002
             // setInterval(() => {
             //     Mediator.broadcast('evSys1-100', origin)
@@ -60,6 +61,16 @@ export default class SubSys1_1 {
 
             //     Mediator.broadcast('evApp-011', origin) // 010, 011, 012
             // }, 0)
+
+            // broadcast promises:
+            // Mediator.subscribe('evPromise', (base) => {
+            //     console.log('handler evPromise ' + origin)
+            //     return base + 123
+            // })
+
+            // setTimeout(async () => {
+            //     console.log(`RES CALL from ${origin}:`, await Mediator.broadcastPromise('evPromise', 333))
+            // }, 500)
 
             // ...
         })

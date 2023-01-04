@@ -1,9 +1,11 @@
-import Mediator from '../../../src/Mediator.js' // (npm) '@hrimthurs/mediator'
+import Mediator from '../../../src/Mediator.js'
 
 // DBG
 import('../DbgEvents.js').then((instance) => {
+    const origin = 'Sys3'
+
     let dbgEvents = new instance.DbgEvents({
-        origin: 'Sys3',
+        origin,
         subscribe: (eventName, handlerFunc, options) => Mediator.subscribe(eventName, handlerFunc, options),
         broadcast: (eventName, ...args) => Mediator.broadcast(eventName, ...args),
         removeHandler: (handlerId, eventName) => Mediator.removeHandler(handlerId, eventName)
@@ -42,7 +44,6 @@ import('../DbgEvents.js').then((instance) => {
     // self broadcast:
     dbgEvents.selfBroadcast([200, 400])
 
-    // let origin = 'Sys3'
     // Mediator.broadcast('evApp-001', origin) // 000, 001, 002
     // setInterval(() => {
     //     Mediator.broadcast('evSys1-100', origin)
@@ -55,6 +56,16 @@ import('../DbgEvents.js').then((instance) => {
 
     //     Mediator.broadcast('evApp-012', origin) // 010, 011, 012
     // }, 0)
+
+    // broadcast promises:
+    // Mediator.subscribe('evPromise', (base) => {
+    //     console.log('handler evPromise ' + origin)
+    //     return null
+    // })
+
+    // setTimeout(async () => {
+    //     console.log(`RES CALL from ${origin}:`, await Mediator.broadcastPromise('evPromise', 777))
+    // }, 500)
 
     // ...
 })
