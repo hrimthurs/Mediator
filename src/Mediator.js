@@ -195,7 +195,6 @@ export default class Mediator {
     static #importWorker(worker, config) {
         let promise = new Promise((resolve, reject) => {
             const throwError = (message) => {
-                this.active = false
                 clearTimeout(connectTimeOut)
                 worker.terminate()
                 reject({ message })
