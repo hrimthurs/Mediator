@@ -206,7 +206,7 @@ export default class Mediator {
 
             worker.addEventListener('error', (event) => {
                 event.preventDefault()
-                throwError(event.message)
+                throwError(event.message.replace(/^Uncaught Error:\s*/, ''))
             })
 
             worker.addEventListener('message', ({ data: msg }) => {
