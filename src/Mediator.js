@@ -205,7 +205,7 @@ export default class Mediator {
             }, TIMEOUT_WORKER_CONNECT)
 
             worker.addEventListener('error', (event) => {
-                throwError(event.message.replace(/^Uncaught Error:\s*/, ''))
+                throwError(event.message)
             })
 
             worker.addEventListener('message', ({ data: msg }) => {
