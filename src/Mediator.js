@@ -7,6 +7,14 @@ const GLOBAL_RESOLVE_RESULT = 'MediatorGlobalResolveResult'
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
 
+/**
+ * Record of System
+ * @typedef {object} TSystem
+ * @property {string} name              - name system
+ * @property {Promise|Worker} instance  - instance system: promise of dynamic import module or webworker instance
+ * @property {object} [config]          - configuration system (default: {})
+ */
+
 export default class Mediator {
 
     static #active = true
@@ -48,14 +56,25 @@ export default class Mediator {
     }
 
     /**
+     * Supplementing values to config records of systems
+     * @param {TSystem|TSystem[]} systems               - records of systems
+     * @param {Record<string,object>} supplementRecords - supplement to config (key → system name, val → supplement values)
+     */
+    static supplementSysCfg(systems, supplementRecords) {
+        const arrSystems = TkArray.getArray(systems)
+
+        TkObject.enumeration(supplementRecords, (values, sysName) => {
+            arrSystems.forEach((rec) => {
+                if (rec.name === sysName) {
+                    rec.config = TkObject.merge(rec.config, values)
+                }
+            })
+        })
+    }
+
+    /**
      * Asynchronous connection systems
      * @param {TSystem|TSystem[]} systems   - records of systems to connect
-     *
-     * @typedef {object} TSystem
-     * @property {string} name              - name system
-     * @property {Promise|Worker} instance  - instance system: promise of dynamic import module or webworker instance
-     * @property {object} [config]          - configuration system (default: {})
-     *
      * @returns {Promise} promise connected all systems
      */
     static connect(systems) {
