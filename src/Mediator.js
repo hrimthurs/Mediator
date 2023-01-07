@@ -10,9 +10,9 @@ const mainContext = workerMode ? self : window
 /**
  * Record of System
  * @typedef {object} TSystem
- * @property {string} name              - name system
- * @property {Promise|Worker} instance  - instance system: promise of dynamic import module or webworker instance
- * @property {object} [config]          - configuration system (default: {})
+ * @property {string} name              Name system
+ * @property {Promise|Worker} instance  Instance system: promise of dynamic import module or webworker instance
+ * @property {object} [config]          Configuration system (default: {})
  */
 
 export default class Mediator {
@@ -48,7 +48,7 @@ export default class Mediator {
 
     /**
      * Availability registered event
-     * @param {string} eventName            - event name
+     * @param {string} eventName Event name
      * @returns {boolean}
      */
     static isExistEvent(eventName) {
@@ -57,8 +57,8 @@ export default class Mediator {
 
     /**
      * Supplementing values to config records of systems
-     * @param {TSystem|TSystem[]} systems               - records of systems
-     * @param {Record<string,object>} supplementRecords - supplement to config (key → system name, val → supplement values)
+     * @param {TSystem|TSystem[]} systems               Records of systems
+     * @param {Record<string,object>} supplementRecords Supplement to config (key → system name, val → supplement values)
      */
     static supplementSysCfg(systems, supplementRecords) {
         const arrSystems = TkArray.getArray(systems)
@@ -74,8 +74,8 @@ export default class Mediator {
 
     /**
      * Asynchronous connection systems
-     * @param {TSystem|TSystem[]} systems   - records of systems to connect
-     * @returns {Promise} promise connected all systems
+     * @param {TSystem|TSystem[]} systems   Records of systems to connect
+     * @returns {Promise}                   Promise connected all systems
      */
     static connect(systems) {
         let connectPromises = TkArray.getArray(systems)
@@ -104,16 +104,16 @@ export default class Mediator {
 
     /**
      * Set handler function to event
-     * @param {string} eventName            - name event
-     * @param {function} handlerFunc        - handler function
+     * @param {string} eventName            Event name
+     * @param {function} handlerFunc        Handler function
      *
-     * @param {object} [options]            - options of handler
-     * @param {string} [options.id]         - force set handler id (if not set: auto generate)
-     * @param {boolean} [options.once]      - remove handler after once execution (default: false)
-     * @param {number} [options.sleep]      - pause between handler calls in ms (default: 0)
-     * @param {number} [options.limResolve] - limit in ms for wait resolve handler (0 → unlimit) (default: TIMEOUT_PROMISE_RESOLVE)
+     * @param {object} [options]            Options of handler
+     * @param {string} [options.id]         Force set handler id (if not set: auto generate)
+     * @param {boolean} [options.once]      Remove handler after once execution (default: false)
+     * @param {number} [options.sleep]      Pause between handler calls in ms (default: 0)
+     * @param {number} [options.limResolve] Limit in ms for wait resolve handler (0 → unlimit) (default: TIMEOUT_PROMISE_RESOLVE)
      *
-     * @returns {string} handler id
+     * @returns {string}                    Handler id
      */
     static subscribe(eventName, handlerFunc, options = {}) {
         let handlerId = options.id ?? TkService.generateHashUID(handlerFunc.toString())
@@ -134,8 +134,8 @@ export default class Mediator {
 
     /**
      * Remove exist handler from event
-     * @param {string} handlerId            - handler id
-     * @param {string} [eventName]          - name event (if not set: removes this handler from all existing events)
+     * @param {string} handlerId            Handler id
+     * @param {string} [eventName]          Name event (if not set: removes this handler from all existing events)
      */
     static removeHandler(handlerId, eventName = null) {
         this.#actionAllSystems('actionRemoveHandler', { handlerId, eventName })
@@ -143,8 +143,8 @@ export default class Mediator {
 
     /**
      * Broadcast event
-     * @param {string} eventName            - event name
-     * @param {any} args                    - arguments of event
+     * @param {string} eventName            Event name
+     * @param {any} args                    Arguments of event
      */
     static broadcast(eventName, ...args) {
         this.#execEvent(eventName, args)
@@ -152,9 +152,9 @@ export default class Mediator {
 
     /**
      * Broadcast event and return promise results handlers
-     * @param {string} eventName            - event name
-     * @param {any} args                    - arguments of event
-     * @returns {Promise} promise results of all event handlers
+     * @param {string} eventName            Event name
+     * @param {any} args                    Arguments of event
+     * @returns {Promise}                   Promise results of all event handlers
      */
     static broadcastPromise(eventName, ...args) {
         return this.#execEventPromise(eventName, args)
@@ -162,7 +162,7 @@ export default class Mediator {
 
     /**
      * Export system for worker mode
-     * @param {object} [classesInstantiate] - classes of system for which the constructor is called after connection
+     * @param {object} [classesInstantiate] Classes of system for which the constructor is called after connection
      */
     static exportWorker(...classesInstantiate) {
         if (this.isWorker) {
