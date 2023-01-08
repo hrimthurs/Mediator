@@ -7,14 +7,6 @@ const GLOBAL_RESOLVE_RESULT = 'MediatorGlobalResolveResult'
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
 
-/**
- * Record of System
- * @typedef {object} TSystem
- * @property {string} name              Name system
- * @property {Promise|Worker} instance  Instance system: promise of dynamic import module or webworker instance
- * @property {object} [config]          Configuration system (default: {})
- */
-
 export default class Mediator {
 
     static #active = true
@@ -22,9 +14,18 @@ export default class Mediator {
 
     static #workers = {}
     static #events = {}
+    static #supplementCfg = {}
 
     static #resolves = {}
     static #indResolve = 0
+
+    /**
+     * Record of System
+     * @typedef {object} TSystem
+     * @property {string} name              Name system
+     * @property {Promise|Worker} instance  Instance system: promise of dynamic import module or webworker instance
+     * @property {object} [config]          Configuration system. Can contain transferable objects (default: {})
+     */
 
     /**
      * Current context is a webworker
@@ -56,20 +57,15 @@ export default class Mediator {
     }
 
     /**
-     * Supplementing values to config records of systems
-     * @param {TSystem|TSystem[]} systems               Records of systems
-     * @param {Record<string,object>} supplementRecords Supplement to config (key → system name, val → supplement values)
+     * Supplementing values to config records of systems.
+     * Applied immediately before connecting a specific system
+     * @typedef {Object<string,object>} TCfgValues
+     * @param {Object<string,(TCfgValues|function(boolean,object):TCfgValues|Promise<TCfgValues>)>} supplement Supplement to config (key → system name, val → values)
+     *      - arg0 - system running in web worker
+     *      - arg1 - current system configuration
      */
-    static supplementSysCfg(systems, supplementRecords) {
-        const arrSystems = TkArray.getArray(systems)
-
-        TkObject.enumeration(supplementRecords, (values, sysName) => {
-            arrSystems.forEach((rec) => {
-                if (rec.name === sysName) {
-                    rec.config = TkObject.merge(rec.config, values)
-                }
-            })
-        })
+    static supplementSysCfg(supplement) {
+        this.#supplementCfg = supplement
     }
 
     /**
@@ -80,10 +76,11 @@ export default class Mediator {
     static connect(systems) {
         let connectPromises = TkArray.getArray(systems)
             .map((rec) => {
-                return new Promise((resolve, reject) => {
-                    const cfg = rec.config ?? {}
+                return new Promise(async (resolve, reject) => {
+                    const isWorker = rec.instance instanceof Worker
+                    const cfg = await this.#applySupplementCfg(rec.name, isWorker, rec.config)
 
-                    const promise = rec.instance instanceof Worker
+                    const promise = isWorker
                         ? this.#importWorker(rec.instance, cfg)
                         : rec.instance
 
@@ -211,6 +208,26 @@ export default class Mediator {
         }
     }
 
+    static #applySupplementCfg(sysName, isWorker, config = {}) {
+        return new Promise(async (resolve) => {
+            const srcSupplement = this.#supplementCfg[sysName]
+            if (srcSupplement) {
+
+                const supplement = typeof srcSupplement === 'function'
+                    ? await srcSupplement(isWorker, config)
+                    : srcSupplement instanceof Promise
+                        ? await srcSupplement
+                        : srcSupplement
+
+                if (typeof supplement === 'object') {
+                    config = TkObject.merge(config, supplement)
+                }
+            }
+
+            resolve(config)
+        })
+    }
+
     static #importWorker(worker, config) {
         let promise = new Promise((resolve, reject) => {
             const throwError = (message) => {
@@ -274,7 +291,7 @@ export default class Mediator {
                 }
             })
 
-            worker.postMessage({ name: 'wrkInstall', config })
+            worker.postMessage({ name: 'wrkInstall', config }, TkObject.getArrayTransferable(config))
         })
 
         return promise

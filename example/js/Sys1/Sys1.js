@@ -6,6 +6,8 @@ import SubSys1_2 from './SubSys1_2.js'
 export default class Sys1 {
 
     constructor (config) {
+        console.log('SYSTEM:', this.constructor.name, config)
+
         new SubSys1_1()
 
         // DBG

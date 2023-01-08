@@ -1,23 +1,33 @@
 import Mediator from '../../src/Mediator.js'
 
-const availWorker = typeof Worker === 'function'
+const supportWorker = typeof Worker === 'function'
 
 const cfgSystems = {
     Sys1: {
-        worker: availWorker && new Worker(new URL('./Sys1/Sys1.js', import.meta.url)),
+        worker: supportWorker && new Worker(new URL('./Sys1/Sys1.js', import.meta.url)),
         config: {
             cfgVal: 'valSys'
         }
     },
 
-    Sys2: {
-        worker: availWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
-    },
+    // Sys2: {
+    //     worker: supportWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
+    // },
 
-    Sys3: {
-        worker: availWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
-    }
+    // Sys3: {
+    //     worker: supportWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
+    // }
 }
+
+const trans = new ArrayBuffer(16)
+console.log('src:', trans)
+
+Mediator.supplementSysCfg({
+    'noSys': { val: 123 },
+    // 'Sys1': { trans }
+    'Sys1': new Promise ((resolve) => setTimeout(() => resolve({ trans }), 500))
+    // 'Sys1': (isWorker) => ({ trans: isWorker ? trans : 'str' })
+})
 
 const systems = Object.keys(cfgSystems).map((name) => ({
     name,
@@ -29,7 +39,7 @@ const systems = Object.keys(cfgSystems).map((name) => ({
 // const systems = [
 //     {
 //         name: 'Sys1',
-//         instance: availWorker
+//         instance: supportWorker
 //             ? new Worker(new URL('./Sys1/Sys1.js', import.meta.url))
 //             : import('./Sys1/Sys1.js'),
 //         config: {
@@ -38,13 +48,13 @@ const systems = Object.keys(cfgSystems).map((name) => ({
 //     },
 //     {
 //         name: 'Sys2',
-//         instance: availWorker
+//         instance: supportWorker
 //             ? new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
 //             : import('./Sys2/Sys2.js')
 //     },
 //     {
 //         name: 'Sys3',
-//         instance: availWorker
+//         instance: supportWorker
 //             ? new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
 //             : import('./Sys3/Sys3.js')
 //     }
