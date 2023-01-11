@@ -176,7 +176,7 @@ export default class Mediator {
                             break
 
                         case 'wrkInit':
-                            TkObject.enumeration(msg.initEvents, (fields, eventName) => {
+                            TkObject.traverse(msg.initEvents, (fields, eventName) => {
                                 this.#setEvent(eventName, fields)
                             })
                             break
@@ -250,7 +250,7 @@ export default class Mediator {
                         clearTimeout(connectTimeOut)
                         this.#workers[msg.workerId] = worker
 
-                        let initEvents = TkObject.enumeration(this.#events, (event) => ({
+                        let initEvents = TkObject.traverse(this.#events, (event) => ({
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
@@ -309,7 +309,7 @@ export default class Mediator {
                     const handlersIds = [param.handlerId]
 
                     if (!param.eventName) {
-                        TkObject.enumeration(this.#events, (event, eventName) => {
+                        TkObject.traverse(this.#events, (event, eventName) => {
                            this.#removeEventHandler(eventName, handlersIds)
                         })
                     } else this.#removeEventHandler(param.eventName, handlersIds)
@@ -495,7 +495,7 @@ export default class Mediator {
     }
 
     static #postMessageToChildren(message, ignoreWorkerId = null) {
-        TkObject.enumeration(this.#workers, (worker, workerId) => {
+        TkObject.traverse(this.#workers, (worker, workerId) => {
             if (worker && (!ignoreWorkerId || (workerId !== ignoreWorkerId))) worker.postMessage(message)
         })
     }
@@ -511,7 +511,7 @@ export default class Mediator {
 
         const event = this.#events[eventName]
 
-        TkObject.enumeration(fields, (val, key) => {
+        TkObject.traverse(fields, (val, key) => {
             if (Array.isArray(event[key])) {
                 if ((key === 'handlers') || !event[key].includes(val)) {
                     event[key].push(val)
