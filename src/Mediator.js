@@ -167,8 +167,6 @@ export default class Mediator {
                 if (this.#active) {
                     switch (msg.name) {
                         case 'wrkInstall':
-                            classesInstantiate.forEach((classInst) => new classInst(msg.config))
-
                             this.#postMessageToParent({
                                 name: 'wrkInstalled',
                                 workerId: this.#threadId
@@ -179,6 +177,8 @@ export default class Mediator {
                             TkObject.traverse(msg.initEvents, (fields, eventName) => {
                                 this.#setEvent(eventName, fields)
                             })
+
+                            classesInstantiate.forEach((classInst) => new classInst(msg.config))
                             break
 
                         case 'wrkActionAllSystems':
@@ -250,7 +250,7 @@ export default class Mediator {
                         clearTimeout(connectTimeOut)
                         this.#workers[msg.workerId] = worker
 
-                        let initEvents = TkObject.traverse(this.#events, (event) => ({
+                        const initEvents = TkObject.traverse(this.#events, (event) => ({
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
