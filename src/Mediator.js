@@ -254,7 +254,7 @@ export default class Mediator {
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
-                        worker.postMessage({ name: 'wrkInit', initEvents })
+                        worker.postMessage({ name: 'wrkInit', initEvents, config }, TkObject.getArrayTransferable(config))
 
                         resolve()
                         break
@@ -291,7 +291,7 @@ export default class Mediator {
                 }
             })
 
-            worker.postMessage({ name: 'wrkInstall', config }, TkObject.getArrayTransferable(config))
+            worker.postMessage({ name: 'wrkInstall' })
         })
 
         return promise
