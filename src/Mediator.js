@@ -179,6 +179,11 @@ export default class Mediator {
                             })
 
                             classesInstantiate.forEach((classInst) => new classInst(msg.config))
+
+                            this.#postMessageToParent({
+                                name: 'wrkInitComplete',
+                                resolveId: msg.resolveId
+                            })
                             break
 
                         case 'wrkActionAllSystems':
@@ -254,9 +259,16 @@ export default class Mediator {
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
-                        worker.postMessage({ name: 'wrkInit', initEvents, config }, TkObject.getArrayTransferable(config))
+                        worker.postMessage({
+                            name: 'wrkInit',
+                            resolveId: this.#addGlobalResolve(resolve),
+                            initEvents, config
+                        }, TkObject.getArrayTransferable(config))
 
-                        resolve()
+                        break
+
+                    case 'wrkInitComplete':
+                        this.#fulfillGlobalResolve(msg.resolveId)
                         break
 
                     case 'wrkActionAllSystems':
@@ -541,11 +553,18 @@ export default class Mediator {
     }
 
     static #createGlobalResolve(promises) {
-        const resolveId = ++this.#indResolve
+        let resolveId
 
         promises.push(new Promise((resolve) => {
-            this.#resolves[resolveId] = resolve
+            resolveId = this.#addGlobalResolve(resolve)
         }))
+
+        return resolveId
+    }
+
+    static #addGlobalResolve(resolve) {
+        const resolveId = ++this.#indResolve
+        this.#resolves[resolveId] = resolve
 
         return resolveId
     }
