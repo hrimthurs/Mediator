@@ -7,6 +7,21 @@ const GLOBAL_RESOLVE_RESULT = 'MediatorGlobalResolveResult'
 const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
 
+/**
+ * @typedef {import('@hrimthurs/tackle').TObjectJS} TObjectJS
+ *
+ * @typedef {object} TSystem                Record of System
+ * @property {string} name                  Name system
+ * @property {Promise|Worker} instance      Instance system: promise of dynamic import module or webworker instance
+ * @property {TObjectJS} [config]           Configuration system. Can contain transferable objects (default: {})
+ *
+ * @typedef {object} THandlerOptions        Options of handler
+ * @property {string} [options.id]          Force set handler id (if not set: auto generate)
+ * @property {boolean} [options.once]       Remove handler after once execution (default: false)
+ * @property {number} [options.sleep]       Pause between handler calls in ms (default: 0)
+ * @property {number} [options.limResolve]  Limit in ms for wait resolve handler (0 → unlimit) (default: TIMEOUT_PROMISE_RESOLVE)
+ */
+
 export default class Mediator {
 
     static #active = true
@@ -18,14 +33,6 @@ export default class Mediator {
 
     static #resolves = {}
     static #indResolve = 0
-
-    /**
-     * Record of System
-     * @typedef {object} TSystem
-     * @property {string} name              Name system
-     * @property {Promise|Worker} instance  Instance system: promise of dynamic import module or webworker instance
-     * @property {object} [config]          Configuration system. Can contain transferable objects (default: {})
-     */
 
     /**
      * Current context is a webworker
@@ -59,8 +66,7 @@ export default class Mediator {
     /**
      * Supplementing values to config records of systems.
      * Applied immediately before connecting a specific system
-     * @typedef {Object<string,object>} TCfgValues
-     * @param {Object<string,(TCfgValues|function(boolean,object):TCfgValues|Promise<TCfgValues>)>} supplement Supplement to config (key → system name, val → values)
+     * @param {Object<string,(TObjectJS|function(boolean,TObjectJS):(TObjectJS|Promise<TObjectJS>))>} supplement Supplement to config (key → system name, val → values)
      *      - arg0 - system running in web worker
      *      - arg1 - current system configuration
      */
@@ -103,13 +109,7 @@ export default class Mediator {
      * Set handler function to event
      * @param {string} eventName            Event name
      * @param {function} handlerFunc        Handler function
-     *
-     * @param {object} [options]            Options of handler
-     * @param {string} [options.id]         Force set handler id (if not set: auto generate)
-     * @param {boolean} [options.once]      Remove handler after once execution (default: false)
-     * @param {number} [options.sleep]      Pause between handler calls in ms (default: 0)
-     * @param {number} [options.limResolve] Limit in ms for wait resolve handler (0 → unlimit) (default: TIMEOUT_PROMISE_RESOLVE)
-     *
+     * @param {THandlerOptions} [options]   Options of handler
      * @returns {string}                    Handler id
      */
     static subscribe(eventName, handlerFunc, options = {}) {
@@ -159,7 +159,7 @@ export default class Mediator {
 
     /**
      * Export system for worker mode
-     * @param {object} [classesInstantiate] Classes of system for which the constructor is called after connection
+     * @param {TObjectJS} [classesInstantiate] Classes of system for which the constructor is called after connection
      */
     static exportWorker(...classesInstantiate) {
         if (this.isWorker) {
