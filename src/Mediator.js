@@ -159,7 +159,7 @@ export default class Mediator {
 
     /**
      * Export system for worker mode
-     * @param {TObjectJS} [classesInstantiate] Classes of system for which the constructor is called after connection
+     * @param {object[]} [classesInstantiate] Classes of system for which the constructor is called after connection
      */
     static exportWorker(...classesInstantiate) {
         if (this.isWorker) {
