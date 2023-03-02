@@ -1,6 +1,6 @@
 import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
-const TIMEOUT_WORKER_CONNECT = 1000
+const TIMEOUT_WORKER_CONNECT = 30000
 const TIMEOUT_PROMISE_RESOLVE = 1000
 const GLOBAL_RESOLVE_RESULT = 'MediatorGlobalResolveResult'
 
