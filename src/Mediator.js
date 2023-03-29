@@ -81,6 +81,7 @@ export default class Mediator {
      */
     static connect(systems) {
         let connectPromises = TkArray.getArray(systems)
+            .filter((rec) => rec)
             .map((rec) => {
                 return new Promise(async (resolve, reject) => {
                     const isWorker = rec.instance instanceof Worker
