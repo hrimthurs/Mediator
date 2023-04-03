@@ -34,6 +34,8 @@ export default class Mediator {
     static #resolves = {}
     static #indResolve = 0
 
+    static #disableEvents = {}
+
     /**
      * Current context is a webworker
      * @returns {boolean}
@@ -159,6 +161,15 @@ export default class Mediator {
     }
 
     /**
+     * Set allow handling events (enable/disable)
+     * @param {boolean} isAllow             Allow this events
+     * @param  {...string} eventsNames      Events names
+     */
+    static allowEvents(isAllow, ...eventsNames) {
+        this.#distributeTotalAction('AllowEvents', { isAllow, eventsNames })
+    }
+
+    /**
      * Export system for worker mode
      * @param {object[]} [classesInstantiate] Classes of system for which the constructor is called after connection
      */
@@ -195,6 +206,11 @@ export default class Mediator {
                             const callParent = msg.callParent
                             this.#setEvent(msg.eventName, { callParent })
                             if (msg.deep) this.#setChildrenCallParent(msg.eventName, callParent, msg.deep)
+                            break
+
+                        case 'wrkRunTotalAction':
+                            this.#runTotalAction(msg.actionName, msg.params)
+                            this.#postMessageToChildren({ name: 'wrkRunTotalAction', ...msg })
                             break
 
                         case 'wrkExecEvent':
@@ -280,6 +296,10 @@ export default class Mediator {
                         this.#distributeEvent(msg.eventName, { callWorkers: msg.workerId }, msg.workerId)
                         break
 
+                    case 'wrkDistributeTotalAction':
+                        this.#distributeTotalAction(msg.actionName, msg.params, msg.workerId)
+                        break
+
                     case 'wrkDelCallWorker':
                         const event = this.#events[msg.eventName]
                         event.callWorkers = event.callWorkers.filter((id) => id !== msg.workerId)
@@ -351,9 +371,24 @@ export default class Mediator {
         })
     }
 
+    static #distributeTotalAction(actionName, params, thread = null) {
+        this.#runTotalAction(actionName, params)
+
+        this.#postMessageToChildren({
+            name: 'wrkRunTotalAction',
+            actionName, params
+        }, thread)
+
+        this.#postMessageToParent({
+            name: 'wrkDistributeTotalAction',
+            workerId: this.#threadId,
+            actionName, params
+        })
+    }
+
     static #execEvent(eventName, args, thread = null) {
         if (this.#active) {
-            const event = this.#events[eventName]
+            const event = !this.#disableEvents[eventName] && this.#events[eventName]
             if (event) {
                 this.#callHandlers(eventName, event, args)
 
@@ -381,7 +416,7 @@ export default class Mediator {
         let promises = []
 
         if (this.#active) {
-            const event = this.#events[eventName]
+            const event = !this.#disableEvents[eventName] && this.#events[eventName]
             if (event) {
                 this.#callHandlers(eventName, event, args, promises)
 
@@ -531,6 +566,17 @@ export default class Mediator {
                 }
             } else event[key] = val
         })
+    }
+
+    static #runTotalAction(actionName, params) {
+        switch (actionName) {
+            case 'AllowEvents':
+                params.eventsNames.forEach((eventName) => {
+                    if (params.isAllow) delete this.#disableEvents[eventName]
+                    else this.#disableEvents[eventName] = true
+                })
+                break
+        }
     }
 
     static #isEmptyEvent(event, ignoreWorkerId = null) {
