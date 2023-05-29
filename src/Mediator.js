@@ -31,6 +31,11 @@ export default class Mediator {
     static #events = {}
     static #supplementCfg = {}
 
+    static #connect = {
+        names: [],
+        promises: null
+    }
+
     static #resolves = {}
     static #indResolve = 0
 
@@ -82,9 +87,11 @@ export default class Mediator {
      * @returns {Promise}                   Promise connected all systems
      */
     static connect(systems) {
-        let connectPromises = TkArray.getArray(systems)
+        this.#connect.promises = TkArray.getArray(systems)
             .filter((rec) => rec)
-            .map((rec) => {
+            .map((rec, ind) => {
+                this.#connect.names[ind] = rec.name
+
                 return new Promise(async (resolve, reject) => {
                     const isWorker = rec.instance instanceof Worker
                     const cfg = await this.#applySupplementCfg(rec.name, isWorker, rec.config)
@@ -100,12 +107,41 @@ export default class Mediator {
                             resolve()
                         })
                         .catch((error) => {
-                            reject({ sysName: rec.name, error })
+                            reject(error.message)
                         })
                 })
             })
 
-        return Promise.all(connectPromises)
+        return this.waitConnect()
+    }
+
+    /**
+     * Waiting connect of specific system or all systems
+     * @param {string} [sysName]                            System name (default: null → wait all systems)
+     * @param {function(object|string):void} [cbConnected]  Callback on connected waiting system
+     * @returns {Promise}                                   Promise connected waiting system
+     */
+    static waitConnect(sysName = null, cbConnected = () => {}) {
+        return new Promise(async (resolve) => {
+            let error = null
+
+            if (sysName) {
+                const ind = this.#connect.names.findIndex((name) => name === sysName)
+                if (ind === -1) error = 'Unknown system'
+                else await this.#connect.promises[ind].catch((err) => error = err)
+            } else {
+                const promises = await Promise.allSettled(this.#connect.promises)
+                promises.forEach((rec, ind) => {
+                    if (rec.status === 'rejected') {
+                        if (!error) error = {}
+                        error[this.#connect.names[ind]] = rec.reason
+                    }
+                })
+            }
+
+            cbConnected(error)
+            resolve(error)
+        })
     }
 
     /**

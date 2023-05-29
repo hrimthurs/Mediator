@@ -10,13 +10,13 @@ const cfgSystems = {
         }
     },
 
-    // Sys2: {
-    //     worker: supportWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
-    // },
+    Sys2: {
+        worker: supportWorker && new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
+    },
 
-    // Sys3: {
-    //     worker: supportWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
-    // }
+    Sys3: {
+        worker: supportWorker && new Worker(new URL('./Sys3/Sys3.js', import.meta.url))
+    }
 }
 
 const trans = new ArrayBuffer(16)
@@ -60,9 +60,60 @@ const systems = Object.keys(cfgSystems).map((name) => ({
 //     }
 // ]
 
+
+
 Mediator.connect(systems)
-    .then(() => console.log('[APPLICATION] Complete connect systems'))
-    .catch((rec) => console.log(`[APPLICATION] Fail connect systems: ${rec.sysName} - ${rec.error.message}`))
+    .then((err) => {
+        if (err) console.log('[APPLICATION] Fail connect systems:', err)
+        else console.log('[APPLICATION] Complete connect systems')
+    })
+
+Mediator.waitConnect(null, (err) => {
+    if (err) console.log('WAIT ALL FAIL CALLBACK:', err)
+    else console.log('WAIT ALL COMPLETE CALLBACK')
+})
+
+Mediator.waitConnect()
+    .then((err) => {
+        if (err) console.log('WAIT ALL FAIL PROMISE:', err)
+        else console.log('WAIT ALL COMPLETE PROMISE')
+    })
+
+Mediator.waitConnect('Sys0', (err) => {
+    if (err) console.log('SYS0 FAIL CALLBACK:', err)
+    else console.log('SYS0 COMPLETE CALLBACK')
+})
+
+Mediator.waitConnect('Sys0')
+    .then((err) => {
+        if (err) console.log('SYS0 FAIL PROMISE:', err)
+        else console.log('SYS0 COMPLETE PROMISE')
+    })
+
+Mediator.broadcast('evTest', 'before wait')
+
+Mediator.waitConnect('Sys1', (err) => {
+    if (err) console.log('SYS1 FAIL CALLBACK:', err)
+    else console.log('SYS1 COMPLETE CALLBACK')
+    Mediator.broadcast('evTest', 'after wait')
+})
+
+Mediator.waitConnect('Sys1')
+    .then((err) => {
+        if (err) console.log('SYS1 FAIL PROMISE:', err)
+        else console.log('SYS1 COMPLETE PROMISE')
+    })
+
+Mediator.waitConnect('Sys2', (err) => {
+    if (err) console.log('SYS2 FAIL CALLBACK:', err)
+    else console.log('SYS2 COMPLETE CALLBACK')
+})
+
+Mediator.waitConnect('Sys2')
+    .then((err) => {
+        if (err) console.log('SYS2 FAIL PROMISE:', err)
+        else console.log('SYS2 COMPLETE PROMISE')
+    })
 
 /////////////////////////////////////////////////   DEBUG   /////////////////////////////////////////////////
 

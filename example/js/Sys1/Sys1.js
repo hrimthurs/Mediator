@@ -6,9 +6,14 @@ import SubSys1_2 from './SubSys1_2.js'
 export default class Sys1 {
 
     constructor (config) {
-        console.log('SYSTEM:', this.constructor.name, config)
+        console.log('CONNECT SYSTEM:', this.constructor.name, config)
 
         new SubSys1_1()
+
+        for (let i = 0; i < 2000000000; i++) {}
+        // throw new Error('!!!')
+
+        Mediator.subscribe('evTest', (origin) => console.log('evTest', origin))
 
         // DBG
         import('../DbgEvents.js').then((instance) => {

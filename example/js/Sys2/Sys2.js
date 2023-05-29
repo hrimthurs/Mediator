@@ -5,6 +5,9 @@ import SubSys2_1 from './SubSys2_1.js'
 class Sys2 {
 
     method() {
+        console.log('CONNECT SYSTEM:', this.constructor.name)
+        for (let i = 0; i < 1000000000; i++) {}
+
         new SubSys2_1()
 
         // DBG

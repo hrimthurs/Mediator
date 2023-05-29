@@ -3,6 +3,7 @@ import Mediator from '../../../src/Mediator.js'
 // DBG
 import('../DbgEvents.js').then((instance) => {
     const origin = 'Sys3'
+    console.log('CONNECT SYSTEM:', origin)
 
     let dbgEvents = new instance.DbgEvents({
         origin,

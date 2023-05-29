@@ -1,6 +1,6 @@
 {
   "name": "@hrimthurs/mediator",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "",
   "author": "@hrimthurs",
   "license": "MIT",
@@ -14,10 +14,10 @@
     "pub": "npm publish --access public"
   },
   "dependencies": {
-    "@hrimthurs/tackle": "^1.14.8"
+    "@hrimthurs/tackle": "^1.16.0"
   },
   "devDependencies": {
-    "webpack-cli": "^5.0.1",
-    "webpack-dev-server": "^4.13.2"
+    "webpack-cli": "^5.1.1",
+    "webpack-dev-server": "^4.15.0"
   }
 }
