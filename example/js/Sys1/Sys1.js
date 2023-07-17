@@ -10,10 +10,21 @@ export default class Sys1 {
 
         new SubSys1_1()
 
-        for (let i = 0; i < 2000000000; i++) {}
+        // for (let i = 0; i < 2000000000; i++) {}
         // throw new Error('!!!')
 
         Mediator.subscribe('evTest', (origin) => console.log('evTest', origin))
+
+
+        // DEBUG CALL PERFOMANCE
+        let cnt = 0
+
+        Mediator.subscribe('evPerf', (origin) => {
+            cnt++
+            return 123
+            // return new Promise((r) => r(123))
+        })
+        Mediator.subscribe('evPerfResult', () => console.log('CALLS SYS1', cnt))
 
         // DBG
         import('../DbgEvents.js').then((instance) => {

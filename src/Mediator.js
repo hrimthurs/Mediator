@@ -1,7 +1,6 @@
 import { TkArray, TkObject, TkService } from '@hrimthurs/tackle'
 
 const TIMEOUT_WORKER_CONNECT = 30000
-const TIMEOUT_PROMISE_RESOLVE = 1000
 const GLOBAL_RESOLVE_RESULT = 'MediatorGlobalResolveResult'
 
 const workerMode = typeof Window === 'undefined'
@@ -19,7 +18,7 @@ const mainContext = workerMode ? self : window
  * @property {string} [options.id]          Force set handler id (if not set: auto generate)
  * @property {boolean} [options.once]       Remove handler after once execution (default: false)
  * @property {number} [options.sleep]       Pause between handler calls in ms (default: 0)
- * @property {number} [options.limResolve]  Limit in ms for wait resolve handler (0 → unlimit) (default: TIMEOUT_PROMISE_RESOLVE)
+ * @property {number} [options.limResolve]  Limit in ms for wait resolve handler (default: 0 → unlimit)
  */
 
 export default class Mediator {
@@ -161,7 +160,7 @@ export default class Mediator {
                 timePrevCall: 0,
                 once: options.once ?? false,
                 sleep: options.sleep ?? 0,
-                limResolve: options.limResolve ?? TIMEOUT_PROMISE_RESOLVE
+                limResolve: options.limResolve ?? 0
             }
         })
 
@@ -312,10 +311,12 @@ export default class Mediator {
                             callParent: event.callParent || !this.#isEmptyEvent(event, msg.workerId)
                         }))
 
+                        const resolveId = ++this.#indResolve
+                        this.#resolves[resolveId] = resolve
+
                         worker.postMessage({
                             name: 'wrkInit',
-                            resolveId: this.#addGlobalResolve(resolve),
-                            initEvents, config
+                            resolveId, initEvents, config
                         }, TkObject.getArrayTransferable(config))
 
                         break
@@ -423,27 +424,30 @@ export default class Mediator {
     }
 
     static #execEvent(eventName, args, thread = null) {
-        if (this.#active) {
-            const event = !this.#disableEvents[eventName] && this.#events[eventName]
-            if (event) {
+        const event = this.#active && !this.#disableEvents[eventName] && this.#events[eventName]
+        if (event) {
+            if (event.handlers.length > 0) {
                 this.#callHandlers(eventName, event, args)
+            }
 
-                event.callWorkers.forEach((workerId) => {
-                    if (workerId !== thread) {
-                        this.#workers[workerId]?.postMessage({
+            if (event.callWorkers.length > 0) {
+                for (let ind = 0; ind < event.callWorkers.length; ind++) {
+                    let workerId = event.callWorkers[ind]
+                    if ((workerId !== thread) && this.#workers[workerId]) {
+                        this.#workers[workerId].postMessage({
                             name: 'wrkExecEvent',
                             eventName, args
                         })
                     }
-                })
-
-                if (event.callParent && (this.#threadId !== thread)) {
-                    this.#postMessageToParent({
-                        name: 'wrkExecEvent',
-                        thread: this.#threadId,
-                        eventName, args
-                    })
                 }
+            }
+
+            if (event.callParent && (this.#threadId !== thread)) {
+                this.#postMessageToParent({
+                    name: 'wrkExecEvent',
+                    thread: this.#threadId,
+                    eventName, args
+                })
             }
         }
     }
@@ -451,88 +455,121 @@ export default class Mediator {
     static #execEventPromise(eventName, args, resolveId = null, thread = null) {
         let promises = []
 
-        if (this.#active) {
-            const event = !this.#disableEvents[eventName] && this.#events[eventName]
-            if (event) {
-                this.#callHandlers(eventName, event, args, promises)
+        const event = this.#active && !this.#disableEvents[eventName] && this.#events[eventName]
+        if (event) {
+            if (event.handlers.length > 0) {
+                this.#callHandlersPromises(eventName, event, args, promises)
+            }
 
-                event.callWorkers.forEach((workerId) => {
-                    if (workerId !== thread) {
-                        this.#workers[workerId]?.postMessage({
+            if (event.callWorkers.length > 0) {
+                for (let ind = 0; ind < event.callWorkers.length; ind++) {
+                    let workerId = event.callWorkers[ind]
+                    if ((workerId !== thread) && this.#workers[workerId]) {
+                        this.#workers[workerId].postMessage({
                             name: 'wrkExecEventPromise',
                             resolveId: this.#createGlobalResolve(promises),
                             eventName, args
                         })
                     }
-                })
-
-                if (event.callParent && (this.#threadId !== thread)) {
-                    this.#postMessageToParent({
-                        name: 'wrkExecEventPromise',
-                        thread: this.#threadId,
-                        resolveId: this.#createGlobalResolve(promises),
-                        eventName, args
-                    })
                 }
+            }
+
+            if (event.callParent && (this.#threadId !== thread)) {
+                this.#postMessageToParent({
+                    name: 'wrkExecEventPromise',
+                    thread: this.#threadId,
+                    resolveId: this.#createGlobalResolve(promises),
+                    eventName, args
+                })
             }
         }
 
-        return Promise.allSettled(promises).then((resPromises) => {
-            let result = this.#processingResultsPromises(resPromises)
+        if (promises.length > 0) {
+            if (promises.length === 1) {
+                return promises[0].then((resPromise) => {
+                    const result = this.#isGlobalPromiseResult(resPromise)
+                        ? resPromise[GLOBAL_RESOLVE_RESULT]
+                        : [resPromise]
 
-            if (thread) {
-                this.#postMessageToThread(thread, {
-                    name: 'wrkResolveEventPromise',
-                    resolveId, result
+                    return this.#getResultPromise(result, resolveId, thread)
                 })
             } else {
-                return result.length > 0
-                    ? result.length === 1 ? result[0] : result
-                    : undefined
+                return Promise.allSettled(promises).then((resPromises) => {
+                    const result = this.#processingResultsPromises(resPromises)
+                    return this.#getResultPromise(result, resolveId, thread)
+                })
             }
-        })
+        }
     }
 
-    static #callHandlers(eventName, event, args, promises = null) {
+    static #callHandlers(eventName, event, args) {
         const now = Date.now()
         let removeHandlers = []
 
-        event.handlers.forEach((rec) => {
+        for (let ind = 0; ind < event.handlers.length; ind++) {
+            let rec = event.handlers[ind]
             if (!rec.sleep || (now - rec.timePrevCall > rec.sleep)) {
-                rec.timePrevCall = now
                 if (rec.once) removeHandlers.push(rec.id)
+                else rec.timePrevCall = now
 
-                if (promises) {
-                    const limTimeout = rec.limResolve
-
-                    const promise = limTimeout
-                        ? this.#createPromiseTimeout(limTimeout, rec.handler, args)
-                        : new Promise((resolve) => resolve(rec.handler(...args)))
-
-                    promises.push(promise)
-                } else rec.handler(...args)
+                rec.handler(...args)
             }
-        })
+        }
 
         if (removeHandlers.length > 0) this.#removeEventHandler(eventName, removeHandlers)
+    }
+
+    static #callHandlersPromises(eventName, event, args, promises) {
+        const now = Date.now()
+        let removeHandlers = []
+
+        for (let ind = 0; ind < event.handlers.length; ind++) {
+            let rec = event.handlers[ind]
+            if (!rec.sleep || (now - rec.timePrevCall > rec.sleep)) {
+                if (rec.once) removeHandlers.push(rec.id)
+                else rec.timePrevCall = now
+
+                const promise = rec.limResolve > 0
+                    ? this.#createPromiseTimeout(rec.limResolve, rec.handler, args)
+                    : new Promise((resolve) => resolve(rec.handler(...args)))
+
+                promises.push(promise)
+            }
+        }
+
+        if (removeHandlers.length > 0) this.#removeEventHandler(eventName, removeHandlers)
+    }
+
+    static #getResultPromise(result, resolveId, thread) {
+        if (thread) {
+            this.#postMessageToThread(thread, {
+                name: 'wrkResolveEventPromise',
+                resolveId, result
+            })
+        } else {
+            if (result.length > 1) return result
+            else if (result.length === 1) return result[0]
+        }
     }
 
     static #processingResultsPromises(resultsPromises) {
         let result = []
 
-        resultsPromises.forEach((rec) => {
+        for (let ind = 0; ind < resultsPromises.length; ind++) {
+            let rec = resultsPromises[ind]
             if ((rec.status === 'fulfilled') && (rec.value !== undefined)) {
-                const isGlobalPromiseResult = (rec.value !== null)
-                    && (typeof rec.value === 'object')
-                    && (GLOBAL_RESOLVE_RESULT in rec.value)
 
-                if (isGlobalPromiseResult) {
+                if (this.#isGlobalPromiseResult(rec.value)) {
                     result.push(...rec.value[GLOBAL_RESOLVE_RESULT])
                 } else result.push(rec.value)
             }
-        })
+        }
 
         return result
+    }
+
+    static #isGlobalPromiseResult(result) {
+        return (result !== null) && (typeof result === 'object') && (GLOBAL_RESOLVE_RESULT in result)
     }
 
     static #removeEventHandler(eventName, handlersIds) {
@@ -623,15 +660,18 @@ export default class Mediator {
         return (event.handlers.length === 0) && (callWorkers.length === 0)
     }
 
-    static #createPromiseTimeout(limTimeout, func, args) {
-        return new Promise(async (resolve) => {
-            const idTimeout = setTimeout(() => resolve(), limTimeout)
+    static #createPromiseTimeout(limResolve, handler, args) {
+        return new Promise((resolve) => {
+            const idTimeout = setTimeout(() => resolve(), limResolve)
 
-            if (func) {
-                const result = await func(...args)
-                clearTimeout(idTimeout)
-                resolve(result)
-            }
+            const result = handler(...args)
+            if (result instanceof Promise) {
+
+                result.finally((res) => {
+                    clearTimeout(idTimeout)
+                    resolve(res)
+                })
+            } else resolve(result)
         })
     }
 
@@ -639,15 +679,9 @@ export default class Mediator {
         let resolveId
 
         promises.push(new Promise((resolve) => {
-            resolveId = this.#addGlobalResolve(resolve)
+            resolveId = ++this.#indResolve
+            this.#resolves[resolveId] = resolve
         }))
-
-        return resolveId
-    }
-
-    static #addGlobalResolve(resolve) {
-        const resolveId = ++this.#indResolve
-        this.#resolves[resolveId] = resolve
 
         return resolveId
     }

@@ -9,13 +9,13 @@ module.exports = (env) => {
         devtool: 'eval',
 
         entry: {
-            example: path.join(pathPublic, 'js', 'example.js')
+            example: path.join(pathPublic, 'js', 'example1.js')
         },
 
         devServer: {
             static: [pathPublic],
             client: { logging: 'none' },
-            port: 9000,
+            port: 9100,
             open: true,
             hot: true
         }

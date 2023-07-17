@@ -1,0 +1,54 @@
+import Mediator from '../../src/Mediator.js'
+
+const supportWorker = typeof Worker === 'function'
+
+const systems = [
+    {
+        name: 'Sys1',
+        instance: supportWorker
+            ? new Worker(new URL('./Sys1/Sys1.js', import.meta.url))
+            : import('./Sys1/Sys1.js'),
+        config: {
+            cfgVal: 'valSys'
+        }
+    },
+    {
+        name: 'Sys2',
+        instance: supportWorker
+            ? new Worker(new URL('./Sys2/Sys2.js', import.meta.url))
+            : import('./Sys2/Sys2.js')
+    }
+]
+
+let cnt = 0
+
+Mediator.subscribe('evPerf', (origin) => {
+    cnt++
+    return 555
+    // return new Promise((r) => r(555))
+})
+Mediator.subscribe('evPerfResult', () => {
+    console.log('CALLS SYS0', cnt)
+})
+
+Mediator.connect(systems)
+    .then(() => {
+        // DEBUG CALL PERFOMANCE
+
+        let tStart = Date.now()
+        let tNow = null
+        let res = []
+
+        console.time('Time')
+
+        do {
+            tNow = Date.now()
+            // Mediator.broadcast('evPerf', tNow)
+            res.push(Mediator.broadcastPromise('evPerf', tNow))
+        } while (tNow - tStart < 1000)
+
+        console.timeEnd('Time')
+
+        Promise.allSettled(res).then((allRes) => console.log(allRes.length, new Set(allRes.flatMap((rec) => rec['value']))))
+        Mediator.broadcast('evPerfResult')
+    })
