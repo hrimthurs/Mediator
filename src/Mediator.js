@@ -144,6 +144,17 @@ export default class Mediator {
     }
 
     /**
+     * Set handlers functions to some events
+     * @param {(Object.<string,function>)|({name:string,handler:function,options?:THandlerOptions}[])} listEvents List of events description
+     * @returns {string[]} Array of handlers ids
+     */
+    static subscribeSome(listEvents) {
+        return Array.isArray(listEvents)
+            ? listEvents.map((event) => this.subscribe(event.name, event.handler, event.options))
+            : Object.entries(listEvents).map(([name, handler]) => this.subscribe(name, handler))
+    }
+
+    /**
      * Set handler function to event
      * @param {string} eventName            Event name
      * @param {function} handlerFunc        Handler function

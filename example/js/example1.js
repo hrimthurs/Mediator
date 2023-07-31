@@ -22,14 +22,30 @@ const systems = [
 
 let cnt = 0
 
-Mediator.subscribe('evPerf', (origin) => {
-    cnt++
-    return 555
-    // return new Promise((r) => r(555))
+// V1
+Mediator.subscribeSome({
+    'evPerf': () => {
+        cnt++
+        return 555
+    },
+    'evPerfResult': () => console.log('CALLS SYS0', cnt)
 })
-Mediator.subscribe('evPerfResult', () => {
-    console.log('CALLS SYS0', cnt)
-})
+
+// V2
+// Mediator.subscribeSome([
+//     {
+//         name: 'evPerf',
+//         handler: () => {
+//             cnt++
+//             return 555
+//         }
+//     },
+//     {
+//         name: 'evPerfResult',
+//         handler: () => console.log('CALLS SYS0', cnt),
+//         options: {}
+//     }
+// ])
 
 Mediator.connect(systems)
     .then(() => {
