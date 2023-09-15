@@ -6,6 +6,7 @@ import SubSys1_2 from './SubSys1_2.js'
 export default class Sys1 {
 
     constructor (config) {
+        throw Error
         console.log('CONNECT SYSTEM:', this.constructor.name, config)
 
         new SubSys1_1()

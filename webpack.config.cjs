@@ -9,7 +9,7 @@ module.exports = (env) => {
         devtool: 'eval',
 
         entry: {
-            example: path.join(pathPublic, 'js', 'example1.js')
+            example: path.join(pathPublic, 'js', 'example.js')
         },
 
         devServer: {

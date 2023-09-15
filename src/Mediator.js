@@ -7,12 +7,10 @@ const workerMode = typeof Window === 'undefined'
 const mainContext = workerMode ? self : window
 
 /**
- * @typedef {import('@hrimthurs/tackle').TObjectJS} TObjectJS
- *
  * @typedef {object} TSystem                Record of System
  * @property {string} name                  Name system
  * @property {Promise|Worker} instance      Instance system: promise of dynamic import module or webworker instance
- * @property {TObjectJS} [config]           Configuration system. Can contain transferable objects (default: {})
+ * @property {object} [config]              Configuration system. Can contain transferable objects (default: {})
  *
  * @typedef {object} THandlerOptions        Options of handler
  * @property {string} [options.id]          Force set handler id (if not set: auto generate)
@@ -72,7 +70,7 @@ export default class Mediator {
     /**
      * Supplementing values to config records of systems.
      * Applied immediately before connecting a specific system
-     * @param {Object<string,(TObjectJS|function(boolean,TObjectJS):(TObjectJS|Promise<TObjectJS>))>} supplement Supplement to config (key → system name, val → values)
+     * @param {Object<string,(object|function(boolean,object):(object|Promise<object>))>} supplement Supplement to config (key → system name, val → values)
      *      - arg0 - system running in web worker
      *      - arg1 - current system configuration
      */
