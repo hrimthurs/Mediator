@@ -116,9 +116,10 @@ export default class Mediator {
      * Waiting connect of specific system or all systems
      * @param {string} [sysName]                            System name (default: null → wait all systems)
      * @param {function(object|string):void} [cbConnected]  Callback on connected waiting system
+     * @param {number} [timeOut]                            Timeout after wait (default: 0)
      * @returns {Promise}                                   Promise connected waiting system
      */
-    static waitConnect(sysName = null, cbConnected = () => {}) {
+    static waitConnect(sysName = null, cbConnected = () => {}, timeOut = 0) {
         return new Promise(async (resolve) => {
             let error = null
 
@@ -136,8 +137,10 @@ export default class Mediator {
                 })
             }
 
-            cbConnected(error)
-            resolve(error)
+            setTimeout(() => {
+                cbConnected(error)
+                resolve(error)
+            }, timeOut)
         })
     }
 
